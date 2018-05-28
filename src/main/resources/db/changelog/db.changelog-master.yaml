@@ -1,0 +1,254 @@
+databaseChangeLog:
+
+  - changeSet:
+      id: 1
+      author: yc_backend
+      dbms: PostgreSQL
+      changes:
+        - createTable:
+            tableName: PERSON
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: remember_me_str
+                  type: varchar2
+                  autoIncrement: false
+              - column:
+                  name: email_hash
+                  type: varchar2
+                  autoIncrement: false
+                  constraints:
+                    nullable: false
+              - column:
+                  name: phone_hash
+                  type: varchar2
+                  autoIncrement: false
+              - column:
+                  name: profile_data
+                  type: varchar2
+                  autoIncrement: false
+              - column:
+                  name: data_version
+                  type: varchar2
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: PERSON_CONNECTION
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: from_person_id
+                  type: bigint
+              - column:
+                  name: to_person_id
+                  type: bigint
+        - createTable:
+            tableName: CONNECTION
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: from_person_id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: to_person_id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: relationship_type
+                  type: varchar2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: connection_data
+                  type: varchar2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_version
+                  type: varchar2
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: EVENT_HISTORY
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: person_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: connection_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: other_person_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_timestamp
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: event_data
+                  type: varchar2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_version
+                  type: varchar2
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: PERSON_SHARING_POLICY
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: connection_id
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: sharing_policy
+                  type: varchar2
+                  constraints:
+                    nullable: false
+              - column:
+                  name: data_version
+                  type: varchar2
+                  constraints:
+                    nullable: false
+        - createTable:
+            tableName: CONNECTION_DOCUMENTS
+            columns:
+              - column:
+                  name: id
+                  type: bigint
+                  autoIncrement: true
+                  constraints:
+                     primaryKey: true
+                     nullable: false
+              - column:
+                  name: connection_id
+                  type: bigint
+                  constraints:
+                     nullable: false
+              - column:
+                  name: from_person_document
+                  type: bytea
+              - column:
+                  name: to_person_document
+                  type: bytea
+
+  - changeSet:
+      id: 2
+      author: yc_backend
+      dbms: PostgreSQL
+      changes:
+        - addForeignKeyConstraint:
+            baseColumnNames: from_person_id
+            baseTableName: PERSON_CONNECTION
+            constraintName: fk_person_connection_from_person_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: PERSON
+        - addForeignKeyConstraint:
+            baseColumnNames: to_person_id
+            baseTableName: PERSON_CONNECTION
+            constraintName: fk_person_connection_to_person_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: PERSON
+        - addForeignKeyConstraint:
+            baseColumnNames: from_person_id
+            baseTableName: CONNECTION
+            constraintName: fk_connection_from_person_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: PERSON
+        - addForeignKeyConstraint:
+            baseColumnNames: to_person_id
+            baseTableName: CONNECTION
+            constraintName: fk_connection_to_person_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: PERSON
+        - addForeignKeyConstraint:
+            baseColumnNames: person_id
+            baseTableName: EVENT_HISTORY
+            constraintName: fk_event_history_person_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: PERSON
+        - addForeignKeyConstraint:
+            baseColumnNames: other_person_id
+            baseTableName: EVENT_HISTORY
+            constraintName: fk_event_history_other_person_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: PERSON
+        - addForeignKeyConstraint:
+            baseColumnNames: connection_id
+            baseTableName: EVENT_HISTORY
+            constraintName: fk_event_history_connection_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: CONNECTION
+        - addForeignKeyConstraint:
+            baseColumnNames: connection_id
+            baseTableName: PERSON_SHARING_POLICY
+            constraintName: fk_person_sharing_policy_connection_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: CONNECTION
+        - addForeignKeyConstraint:
+            baseColumnNames: connection_id
+            baseTableName: CONNECTION_DOCUMENTS
+            constraintName: fk_connection_document_connection_id
+            onDelete: CASCADE
+            referencedColumnNames: id
+            referencedTableName: CONNECTION
+
