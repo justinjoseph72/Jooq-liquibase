@@ -25,4 +25,9 @@ public class FetchConnectionRepoTest {
     public void findConnectionBetweenPersonIds() {
         repo.fetchConnectionBetweenPersonIds(BigInteger.ONE,BigInteger.valueOf(2));
     }
+
+    @Test
+    public void findConnectionForPersonEmail() {
+        repo.fetchConnectionForPersonEmailWithOtherPersonDetails("email1");
+    }
 }

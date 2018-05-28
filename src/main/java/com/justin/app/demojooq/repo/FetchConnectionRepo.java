@@ -26,17 +26,36 @@ public class FetchConnectionRepo {
 
 
     public void fetchConnectionForPersonWithOtherPerson(BigInteger personId) {
-        SelectQuery unionQuery = createQueryToGetConnectionForPersonId(personId, true, "union_table");
-        Table unionTable = unionQuery.asTable("union_table");
-        SelectQuery resultQuery  = jooqDsl.selectQuery();
-        resultQuery.addSelect(unionTable.field(CONNECTION_ID_ALIAS),unionTable.field(OTHER_PERSON_ID_ALIAS),unionTable.field(CONNECTION_DATA),
-                unionTable.field(SHARING_POLICY_DATA),Person.PERSON.PROFILE_DATA.as(OTHER_PERSON_DATA));
+        Table unionTable = createUnionQueryTable(personId, "union_table");
+        SelectQuery resultQuery = jooqDsl.selectQuery();
+        resultQuery.addSelect(unionTable.field(CONNECTION_ID_ALIAS), unionTable.field(OTHER_PERSON_ID_ALIAS), unionTable.field(CONNECTION_DATA),
+                unionTable.field(SHARING_POLICY_DATA), Person.PERSON.PROFILE_DATA.as(OTHER_PERSON_DATA));
         resultQuery.addFrom(unionTable);
-        resultQuery.addJoin(Person.PERSON,JoinType.JOIN,unionTable.field(OTHER_PERSON_ID_ALIAS).eq(Person.PERSON.ID));
+        resultQuery.addJoin(Person.PERSON, JoinType.JOIN, unionTable.field(OTHER_PERSON_ID_ALIAS).eq(Person.PERSON.ID));
         Result<?> records = resultQuery.fetch();
         records.forEach(record -> {
-            log.info(" {}  {} {}", record.getValue(CONNECTION_ID_ALIAS).toString(), record.getValue(OTHER_PERSON_ID_ALIAS),record.getValue(OTHER_PERSON_DATA));
+            log.info(" {}  {} {}", record.getValue(CONNECTION_ID_ALIAS).toString(), record.getValue(OTHER_PERSON_ID_ALIAS), record.getValue(OTHER_PERSON_DATA));
         });
+    }
+
+    private Table createUnionQueryTable(final BigInteger personId, final String tableName) {
+        SelectQuery unionQuery = createQueryToGetConnectionForPersonId(personId, true, "union_table");
+        return unionQuery.asTable(tableName);
+    }
+
+    public void fetchConnectionForPersonEmailWithOtherPersonDetails(String email) {
+        Condition emailCondition = Person.PERSON.EMAIL_HASH.eq(email);
+        SelectQuery fromPersonQuery = createFetchFromPersonConnectionQuery(emailCondition, true);
+        SelectQuery toPersonQuery = createFetchToPersonConnectionQuery(emailCondition, true);
+        SelectQuery unionQuery = createUnionQueryWithName("unionQuery", fromPersonQuery, toPersonQuery);
+//        Table unionTable = unionQuery.asTable("unionTable");
+//        SelectQuery resultQuery = jooqDsl.selectQuery();
+//        resultQuery.addSelect(unionTable.);
+        Result<?> records = unionQuery.fetch();
+        records.forEach(record -> {
+            log.info(" {}  {} ", record.getValue(CONNECTION_ID_ALIAS).toString(), record.getValue(OTHER_PERSON_ID_ALIAS));
+        });
+
     }
 
 
@@ -52,11 +71,14 @@ public class FetchConnectionRepo {
     }
 
     private SelectQuery createQueryToGetConnectionForPersonId(BigInteger personId, boolean withOtherPerson, String queryName) {
-        SelectQuery fromPersonFetchQuery = createFetchFromPersonConnectionQueryWithOtherPerson(personId, withOtherPerson);
-        SelectQuery toPersonFetchQuery = createFetchToPersonConnectionQueryWithOtherPerson(personId, withOtherPerson);
+        Condition toPersonIdCondition = Connection.CONNECTION.TO_PERSON_ID.eq(personId);
+        Condition fromPersonIdCondition = Connection.CONNECTION.FROM_PERSON_ID.eq(personId);
+        SelectQuery fromPersonFetchQuery = createFetchFromPersonConnectionQuery(fromPersonIdCondition, withOtherPerson);
+        SelectQuery toPersonFetchQuery = createFetchToPersonConnectionQuery(toPersonIdCondition, withOtherPerson);
         SelectQuery unionQuery = createUnionQueryWithName(queryName, fromPersonFetchQuery, toPersonFetchQuery);
         return unionQuery;
     }
+
 
     private SelectQuery createUnionQueryWithName(final String queryName, final SelectQuery fromPersonFetchQuery, final SelectQuery toPersonFetchQuery) {
         SelectQuery unionQuery = jooqDsl.selectQuery();
@@ -64,7 +86,7 @@ public class FetchConnectionRepo {
         return unionQuery;
     }
 
-    private SelectQuery createFetchToPersonConnectionQueryWithOtherPerson(final BigInteger personId, final boolean findOtherPerson) {
+    private SelectQuery createFetchToPersonConnectionQuery(final Condition condition, final boolean findOtherPerson) {
         SelectQuery toPersonFetchQuery = jooqDsl.selectQuery();
         if (findOtherPerson) {
             toPersonFetchQuery.addSelect(selectItemsWithFromPerson());
@@ -74,12 +96,12 @@ public class FetchConnectionRepo {
         toPersonFetchQuery.addFrom(Connection.CONNECTION);
         toPersonFetchQuery.addJoin(Person.PERSON, JoinType.JOIN, Connection.CONNECTION.TO_PERSON_ID.eq(Person.PERSON.ID));
         toPersonFetchQuery.addJoin(PersonSharingPolicy.PERSON_SHARING_POLICY, JoinType.JOIN, Connection.CONNECTION.ID.eq(PersonSharingPolicy.PERSON_SHARING_POLICY.CONNECTION_ID));
-        toPersonFetchQuery.addConditions(Connection.CONNECTION.TO_PERSON_ID.eq(personId));
+        toPersonFetchQuery.addConditions(condition);
         return toPersonFetchQuery;
     }
 
 
-    private SelectQuery createFetchFromPersonConnectionQueryWithOtherPerson(final BigInteger personId, final boolean findOtherPerson) {
+    private SelectQuery createFetchFromPersonConnectionQuery(final Condition condition, final boolean findOtherPerson) {
         SelectQuery fromPersonFetchQuery = jooqDsl.selectQuery();
         if (findOtherPerson) {
             fromPersonFetchQuery.addSelect(selectItemsWithToPerson());
@@ -89,7 +111,7 @@ public class FetchConnectionRepo {
         fromPersonFetchQuery.addFrom(Connection.CONNECTION);
         fromPersonFetchQuery.addJoin(Person.PERSON, JoinType.JOIN, Connection.CONNECTION.FROM_PERSON_ID.eq(Person.PERSON.ID));
         fromPersonFetchQuery.addJoin(PersonSharingPolicy.PERSON_SHARING_POLICY, JoinType.JOIN, Connection.CONNECTION.ID.eq(PersonSharingPolicy.PERSON_SHARING_POLICY.CONNECTION_ID));
-        fromPersonFetchQuery.addConditions(Connection.CONNECTION.FROM_PERSON_ID.eq(personId));
+        fromPersonFetchQuery.addConditions(condition);
         return fromPersonFetchQuery;
     }
 
